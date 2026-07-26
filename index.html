@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electrical Monitoring System | SCADA Dashboard</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner-ring"></div>
+            <p>กำลังโหลดระบบ...</p>
+        </div>
+    </div>
+
+    <!-- Alarm Banner -->
+    <div id="alarmBanner" class="alarm-banner hidden">
+        <div class="alarm-content">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span id="alarmText">ระบบตรวจพบค่าผิดปกติ</span>
+            <button id="dismissAlarm" class="alarm-dismiss"><i class="bi bi-x-lg"></i></button>
+        </div>
+    </div>
+
+    <!-- ==================== LOGIN PAGE ==================== -->
+    <div id="loginPage" class="page login-page">
+        <div class="login-container">
+            <div class="login-brand">
+                <i class="bi bi-lightning-charge-fill"></i>
+                <h1>ELECTRICAL MONITORING</h1>
+                <p>ระบบติดตามค่าทางไฟฟ้าแบบ Real-time</p>
+            </div>
+
+            <div class="glass-card login-card">
+                <h2><i class="bi bi-shield-lock"></i> เข้าสู่ระบบ</h2>
+                <form id="loginForm" novalidate>
+                    <div class="form-group">
+                        <label for="loginUsername">
+                            <i class="bi bi-person"></i> ชื่อผู้ใช้
+                        </label>
+                        <input type="text" id="loginUsername" placeholder="กรอกชื่อผู้ใช้" required autocomplete="username">
+                        <span class="error-msg" id="errorLoginUsername"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loginPassword">
+                            <i class="bi bi-key"></i> รหัสผ่าน
+                        </label>
+                        <div class="password-wrapper">
+                            <input type="password" id="loginPassword" placeholder="กรอกรหัสผ่าน" required autocomplete="current-password">
+                            <button type="button" class="toggle-password" id="togglePassword">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <span class="error-msg" id="errorLoginPassword"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full" id="btnLogin">
+                        <i class="bi bi-box-arrow-in-right"></i> เข้าสู่ระบบ
+                    </button>
+                </form>
+
+                <div id="loginResult" class="form-result hidden"></div>
+
+                <div class="login-footer">
+                    <p><i class="bi bi-info-circle"></i> ติดต่อผู้ดูแลระบบเพื่อขอบัญชีผู้ใช้</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MAIN APP (After Login) ==================== -->
+    <div id="mainApp" class="page main-app hidden">
+
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <i class="bi bi-lightning-charge-fill"></i>
+                <span>EMS</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-page="dashboard">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>แดชบอร์ด</span>
+                </button>
+                <button class="nav-item" data-page="input">
+                    <i class="bi bi-pencil-square"></i>
+                    <span>บันทึกข้อมูล</span>
+                </button>
+                <button class="nav-item" data-page="history">
+                    <i class="bi bi-clock-history"></i>
+                    <span>ประวัติข้อมูล</span>
+                </button>
+                <button class="nav-item admin-only hidden" data-page="users">
+                    <i class="bi bi-people"></i>
+                    <span>จัดการผู้ใช้</span>
+                </button>
+                <button class="nav-item admin-only hidden" data-page="settings">
+                    <i class="bi bi-gear"></i>
+                    <span>ตั้งค่าระบบ</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <i class="bi bi-person-circle"></i>
+                    <div>
+                        <span id="sidebarUserName" class="user-name">User</span>
+                        <span id="sidebarUserRole" class="user-role">User</span>
+                    </div>
+                </div>
+                <button class="btn btn-logout" id="btnLogout">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>ออกจากระบบ</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="content-area">
+            <!-- Top Header -->
+            <header class="app-header">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="header-title">
+                    <h2 id="pageTitle"><i class="bi bi-speedometer2"></i> แดชบอร์ด</h2>
+                </div>
+                <div class="header-status">
+                    <div class="status-item">
+                        <span class="status-dot online" id="connDot"></span>
+                        <span id="connectionStatus">ออนไลน์</span>
+                    </div>
+                    <div class="status-item">
+                        <i class="bi bi-clock"></i>
+                        <span id="currentTime">--:--:--</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Contents -->
+            <main class="app-main">
+
+                <!-- ===== DASHBOARD PAGE ===== -->
+                <div id="pageDashboard" class="page-content active">
+                    <div class="section-header">
+                        <h3><i class="bi bi-speedometer2"></i> ค่าทางไฟฟ้าปัจจุบัน</h3>
+                        <span class="last-update">อัปเดตล่าสุด: <span id="lastUpdate">--</span></span>
+                    </div>
+
+                    <div class="gauge-grid">
+                        <div class="glass-card" id="cardVoltage">
+                            <div class="card-header"><i class="bi bi-lightning-charge"></i><span>แรงดันไฟฟ้า</span></div>
+                            <div class="gauge-container">
+                                <canvas id="gaugeVoltage"></canvas>
+                                <div class="gauge-value"><span id="valVoltage" class="value-number">0.0</span><span class="value-unit">V</span></div>
+                            </div>
+                            <div class="gauge-range"><span>0V</span><span>300V</span></div>
+                        </div>
+                        <div class="glass-card" id="cardCurrent">
+                            <div class="card-header"><i class="bi bi-arrow-right-circle"></i><span>กระแสไฟฟ้า</span></div>
+                            <div class="gauge-container">
+                                <canvas id="gaugeCurrent"></canvas>
+                                <div class="gauge-value"><span id="valCurrent" class="value-number">0.0</span><span class="value-unit">A</span></div>
+                            </div>
+                            <div class="gauge-range"><span>0A</span><span>100A</span></div>
+                        </div>
+                        <div class="glass-card" id="cardPower">
+                            <div class="card-header"><i class="bi bi-plug"></i><span>กำลังไฟฟ้า</span></div>
+                            <div class="gauge-container">
+                                <canvas id="gaugePower"></canvas>
+                                <div class="gauge-value"><span id="valPower" class="value-number">0</span><span class="value-unit">W</span></div>
+                            </div>
+                            <div class="gauge-range"><span>0W</span><span>5000W</span></div>
+                        </div>
+                        <div class="glass-card" id="cardEnergy">
+                            <div class="card-header"><i class="bi bi-battery-charging"></i><span>พลังงานสะสม</span></div>
+                            <div class="gauge-container">
+                                <canvas id="gaugeEnergy"></canvas>
+                                <div class="gauge-value"><span id="valEnergy" class="value-number">0.00</span><span class="value-unit">kWh</span></div>
+                            </div>
+                            <div class="gauge-range"><span>0</span><span>1000</span></div>
+                        </div>
+                        <div class="glass-card" id="cardPF">
+                            <div class="card-header"><i class="bi bi-activity"></i><span>ตัวประกอบกำลัง</span></div>
+                            <div class="gauge-container">
+                                <canvas id="gaugePF"></canvas>
+                                <div class="gauge-value"><span id="valPF" class="value-number">0.00</span><span class="value-unit">PF</span></div>
+                            </div>
+                            <div class="gauge-range"><span>0</span><span>1.0</span></div>
+                        </div>
+                        <div class="glass-card" id="cardFrequency">
+                            <div class="card-header"><i class="bi bi-soundwave"></i><span>ความถี่</span></div>
+                            <div class="gauge-container">
+                                <canvas id="gaugeFrequency"></canvas>
+                                <div class="gauge-value"><span id="valFrequency" class="value-number">0.0</span><span class="value-unit">Hz</span></div>
+                            </div>
+                            <div class="gauge-range"><span>45Hz</span><span>65Hz</span></div>
+                        </div>
+                    </div>
+
+                    <div class="section-header">
+                        <h3><i class="bi bi-graph-up-arrow"></i> กราฟแนวโน้ม</h3>
+                    </div>
+                    <div class="charts-grid">
+                        <div class="glass-card chart-card">
+                            <div class="card-header"><i class="bi bi-lightning-charge"></i><span>แนวโน้มแรงดันไฟฟ้า</span></div>
+                            <div class="chart-container"><canvas id="chartVoltage"></canvas></div>
+                        </div>
+                        <div class="glass-card chart-card">
+                            <div class="card-header"><i class="bi bi-arrow-right-circle"></i><span>แนวโน้มกระแสไฟฟ้า</span></div>
+                            <div class="chart-container"><canvas id="chartCurrent"></canvas></div>
+                        </div>
+                        <div class="glass-card chart-card">
+                            <div class="card-header"><i class="bi bi-plug"></i><span>แนวโน้มกำลังไฟฟ้า</span></div>
+                            <div class="chart-container"><canvas id="chartPower"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== INPUT PAGE ===== -->
+                <div id="pageInput" class="page-content hidden">
+                    <div class="section-header">
+                        <h3><i class="bi bi-pencil-square"></i> บันทึกข้อมูลด้วยตนเอง</h3>
+                    </div>
+                    <div class="glass-card form-card">
+                        <form id="manualForm" novalidate>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label><i class="bi bi-hdd-rack"></i> ชื่ออุปกรณ์</label>
+                                    <input type="text" id="inputDevice" placeholder="เช่น Meter-01" required>
+                                    <span class="error-msg" id="errorDevice"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="bi bi-lightning-charge"></i> แรงดันไฟฟ้า (V)</label>
+                                    <input type="number" id="inputVoltage" placeholder="0 - 300" step="0.1" min="0" max="300" required>
+                                    <span class="error-msg" id="errorVoltage"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="bi bi-arrow-right-circle"></i> กระแสไฟฟ้า (A)</label>
+                                    <input type="number" id="inputCurrent" placeholder="0 - 100" step="0.1" min="0" max="100" required>
+                                    <span class="error-msg" id="errorCurrent"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="bi bi-plug"></i> กำลังไฟฟ้า (W)</label>
+                                    <input type="number" id="inputPower" placeholder=">= 0" step="0.1" min="0" required>
+                                    <span class="error-msg" id="errorPower"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="bi bi-battery-charging"></i> พลังงานสะสม (kWh)</label>
+                                    <input type="number" id="inputEnergy" placeholder=">= 0" step="0.01" min="0" required>
+                                    <span class="error-msg" id="errorEnergy"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="bi bi-activity"></i> ตัวประกอบกำลัง (PF)</label>
+                                    <input type="number" id="inputPF" placeholder="0 - 1" step="0.01" min="0" max="1" required>
+                                    <span class="error-msg" id="errorPF"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="bi bi-soundwave"></i> ความถี่ (Hz)</label>
+                                    <input type="number" id="inputFrequency" placeholder="45 - 65" step="0.1" min="45" max="65" required>
+                                    <span class="error-msg" id="errorFrequency"></span>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary" id="btnSave"><i class="bi bi-save"></i> บันทึกข้อมูล</button>
+                                <button type="reset" class="btn btn-secondary" id="btnReset"><i class="bi bi-x-circle"></i> ล้างฟอร์ม</button>
+                            </div>
+                        </form>
+                        <div id="formResult" class="form-result hidden"></div>
+                    </div>
+                </div>
+
+                <!-- ===== HISTORY PAGE ===== -->
+                <div id="pageHistory" class="page-content hidden">
+                    <div class="section-header">
+                        <h3><i class="bi bi-clock-history"></i> ประวัติข้อมูล</h3>
+                        <div class="filter-bar">
+                            <input type="date" id="filterDate" class="filter-input">
+                            <select id="filterDevice" class="filter-input">
+                                <option value="">ทุกอุปกรณ์</option>
+                            </select>
+                            <button class="btn btn-secondary" id="btnFilter"><i class="bi bi-funnel"></i> กรอง</button>
+                        </div>
+                    </div>
+                    <div class="glass-card">
+                        <div class="table-responsive">
+                            <table class="data-table" id="historyTable">
+                                <thead>
+                                    <tr>
+                                        <th>เวลา</th>
+                                        <th>อุปกรณ์</th>
+                                        <th>แรงดัน (V)</th>
+                                        <th>กระแส (A)</th>
+                                        <th>กำลัง (W)</th>
+                                        <th>พลังงาน (kWh)</th>
+                                        <th>PF</th>
+                                        <th>ความถี่ (Hz)</th>
+                                        <th>สถานะ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyBody">
+                                    <tr class="empty-row"><td colspan="9">กำลังโหลดข้อมูล...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="pagination">
+                            <button class="btn btn-sm" id="prevPage"><i class="bi bi-chevron-left"></i></button>
+                            <span id="pageInfo">หน้า 1</span>
+                            <button class="btn btn-sm" id="nextPage"><i class="bi bi-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== USERS PAGE (Admin Only) ===== -->
+                <div id="pageUsers" class="page-content hidden">
+                    <div class="section-header">
+                        <h3><i class="bi bi-people"></i> จัดการผู้ใช้งาน</h3>
+                        <button class="btn btn-primary" id="btnShowAddUser"><i class="bi bi-person-plus"></i> เพิ่มผู้ใช้</button>
+                    </div>
+
+                    <!-- Add User Form -->
+                    <div id="addUserPanel" class="glass-card form-card hidden">
+                        <h4><i class="bi bi-person-plus"></i> เพิ่มผู้ใช้ใหม่</h4>
+                        <form id="addUserForm" class="form-grid">
+                            <div class="form-group">
+                                <label>ชื่อผู้ใช้</label>
+                                <input type="text" id="newUsername" required>
+                                <span class="error-msg" id="errorNewUsername"></span>
+                            </div>
+                            <div class="form-group">
+                                <label>รหัสผ่าน</label>
+                                <input type="password" id="newPassword" required>
+                                <span class="error-msg" id="errorNewPassword"></span>
+                            </div>
+                            <div class="form-group">
+                                <label>ชื่อ-นามสกุล</label>
+                                <input type="text" id="newFullName" required>
+                            </div>
+                            <div class="form-group">
+                                <label>อีเมล</label>
+                                <input type="email" id="newEmail">
+                            </div>
+                            <div class="form-group">
+                                <label>สิทธิ์</label>
+                                <select id="newRole">
+                                    <option value="user">ผู้ใช้งาน (User)</option>
+                                    <option value="admin">ผู้ดูแลระบบ (Admin)</option>
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> บันทึก</button>
+                                <button type="button" class="btn btn-secondary" id="btnCancelAddUser"><i class="bi bi-x-circle"></i> ยกเลิก</button>
+                            </div>
+                        </form>
+                        <div id="addUserResult" class="form-result hidden"></div>
+                    </div>
+
+                    <div class="glass-card">
+                        <div class="table-responsive">
+                            <table class="data-table" id="usersTable">
+                                <thead>
+                                    <tr>
+                                        <th>ชื่อผู้ใช้</th>
+                                        <th>ชื่อ-นามสกุล</th>
+                                        <th>อีเมล</th>
+                                        <th>สิทธิ์</th>
+                                        <th>สถานะ</th>
+                                        <th>สร้างเมื่อ</th>
+                                        <th>จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersBody">
+                                    <tr class="empty-row"><td colspan="7">กำลังโหลด...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== SETTINGS PAGE (Admin Only) ===== -->
+                <div id="pageSettings" class="page-content hidden">
+                    <div class="section-header">
+                        <h3><i class="bi bi-gear"></i> ตั้งค่าระบบ</h3>
+                    </div>
+                    <div class="glass-card form-card">
+                        <form id="settingsForm">
+                            <h4><i class="bi bi-sliders"></i> เกณฑ์แจ้งเตือน</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>แรงดันสูงสุด (V)</label>
+                                    <input type="number" id="setVoltMax" value="240" step="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>แรงดันต่ำสุด (V)</label>
+                                    <input type="number" id="setVoltMin" value="200" step="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>กระแสสูงสุด (A)</label>
+                                    <input type="number" id="setCurrMax" value="30" step="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>ความถี่สูงสุด (Hz)</label>
+                                    <input type="number" id="setFreqMax" value="65" step="0.1">
+                                </div>
+                                <div class="form-group">
+                                    <label>ความถี่ต่ำสุด (Hz)</label>
+                                    <input type="number" id="setFreqMin" value="45" step="0.1">
+                                </div>
+                                <div class="form-group">
+                                    <label>ช่วงอัปเดต (วินาที)</label>
+                                    <input type="number" id="setInterval" value="5" min="1" max="60">
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> บันทึกการตั้งค่า</button>
+                            </div>
+                        </form>
+                        <div id="settingsResult" class="form-result hidden"></div>
+                    </div>
+                </div>
+
+            </main>
+
+            <footer class="app-footer">
+                <p>Electrical Monitoring System v2.0 &copy; 2026 | <span id="footerUser">Guest</span></p>
+            </footer>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
