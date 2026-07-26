@@ -17,7 +17,7 @@ const CONFIG = {
     // ==========================================================
     DEFAULT_USERS: [
         { username: 'admin', password: 'admin123', fullName: 'ผู้ดูแลระบบ', role: 'admin', email: 'admin@example.com', status: 'active' },
-        { username: 'user', password: 'user123', fullName: 'ผู้ใช้งานทั่วไป', role: 'user', email: '', status: 'active' }
+        { username: 'user', password: 'user123', fullName: 'ผู้ใช้งานทั่วไป', role: 'user', email: 'thaksinso@kktech.ac.th', status: 'active' }
     ],
     UPDATE_INTERVAL: 5000,
     MAX_HISTORY_POINTS: 20,
