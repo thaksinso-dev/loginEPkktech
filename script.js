@@ -9,7 +9,7 @@
 // CONFIGURATION
 // ============================================
 const CONFIG = {
-    GAS_URL: 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec',
+    GAS_URL: 'https://script.google.com/macros/s/1DSt80km5bFjDB8C75gEyUefSfMk2Dy-mmfoG6MEtcms/exec',
     UPDATE_INTERVAL: 5000,
     MAX_HISTORY_POINTS: 20,
     HISTORY_PAGE_SIZE: 20,
